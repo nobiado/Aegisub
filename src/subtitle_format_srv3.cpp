@@ -28,7 +28,7 @@
 // Aegisub Project http://www.aegisub.org/
 
 /// @file subtitle_format_srv3.cpp
-/// @brief Writing YouTube internal undocumented format srv3 (xml)
+/// @brief Support for export to YouTube internal undocumented format srv3 (xml)
 /// @ingroup subtitle_io
 
 #include "ass_file.h"
@@ -41,6 +41,16 @@
 #include <boost/spirit/home/classic/tree/tree_to_xml.hpp>
 
 #include "subtitle_format_srv3.h"
+
+
+namespace format {
+    enum penflag {
+        clear = 0,
+        bold =  2,
+        italic = 4,
+        underlined = 8
+    };
+}
 
 
 Srv3SubtitleFormat::Srv3SubtitleFormat()
@@ -63,13 +73,15 @@ void Srv3SubtitleFormat::WriteFile(const AssFile *src, agi::fs::path const& file
     MergeIdentical(copy);
 
     TextFileWriter file(filename, "UTF-8");
-    // Maybe declare these as flyweights?  Later...
+    // Maybe declare these as flyweights?  Not sure.
     using Cue = std::string;
     using Pen = std::string;
     using Wp  = std::string;
-    std::vector<std::string> cues;
-    std::vector<std::string> pens;
-    std::vector<std::string> wss;
+    std::vector<Cue> cues;
+    std::vector<Pen> pens;
+    std::vector<Wp>  wss;
+    format::penflag pflag;
+
 
     file.WriteLineToFile("<?xml version=\"1.0\" encoding=\"utf-8\" ?><timedtext format=\"3\">");
     file.WriteLineToFile("<head>\n</head>");
@@ -99,6 +111,7 @@ void Srv3SubtitleFormat::WriteFile(const AssFile *src, agi::fs::path const& file
                     auto ovr = static_cast<AssDialogueBlockOverride*>(bl.get());
                     ovr->ParseTags();
                     for (auto& tag : ovr->Tags) {
+
                         file.WriteLineToFile("Override: ", false);
                         file.WriteLineToFile(tag.Name + ":", false);
                         for ( auto& tag : tag.Params ) {
